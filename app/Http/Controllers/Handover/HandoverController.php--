@@ -1,0 +1,79 @@
+<?php
+
+namespace App\Http\Controllers\Handover;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+
+class HandoverController extends Controller {
+	
+	public function handover(Request $request) {
+		return view('handover/handover');
+		
+	}
+	
+	public function getHandoverData(Request $request) {
+		
+		$s = $request->get('s');
+		
+		$builder = DB::table('failed_delivery')->where('status', 1);
+		
+		
+		if ($s != '') {
+			$builder->whereNested(function($query) use ($s) {
+				$query
+					->where('seller_name', 'like', '%' . $s . '%')
+					->orWhere('seller_phone_no', 'like', '%' . $s . '%');
+			});
+		}
+		
+		$data = $builder->get();
+		
+		
+		return json_encode(['success' => true, 'data' => $data]);
+		
+	}
+	
+	
+	public function markAsHandover(Request $request) {
+		//return view("hsgdh");
+		
+		$action = $request->get('action');
+		$item_ids = $request->get('item_ids');
+		$item_ids = json_decode($item_ids);
+		
+		if ($action == 'scrap') {
+			$new_status = 9;
+			
+		} else if ($action == 'handover') {
+			$new_status = 5;
+			
+		} else {
+			return json_encode(['success' => false, 'error_message' => 'invalid action']);
+		}
+		
+		
+		$total_updated = DB::table('failed_delivery')
+							->whereIn('id', $item_ids)
+							->update([
+								'status' => $new_status
+							]);
+
+		// $sms_table_insert = DB::table('sms')->insert([
+		// 	'failed_delivery_id' => 1,
+		// 	'phone' => '8801609433334',
+		// 	'category' => 'handover',
+		// 	'delivery_status' => 1,
+		// 	'sms_status' => 0
+		// 		]);
+
+		return json_encode(['success' => true, 'message' => $total_updated . ' items '. $action . ' done successfully']);
+		
+	}
+	
+}
+
+
+

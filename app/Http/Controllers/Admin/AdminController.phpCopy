@@ -1,0 +1,262 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Auth;
+use Illuminate\Support\Facades\Log;
+
+
+class AdminController extends Controller {
+	
+	public function binConfig(Request $request) {
+		return view('admin/binConfig');
+		
+	}
+	
+	public function createBin(Request $request) {
+		
+		$existance = DB::select("select * from bins where bin_no = ?", [$request->get('bin_no')]);
+		
+		if (isset($existance) && count($existance) > 0) {
+			
+			DB::table('bins')
+					->where('bin_no', $request->get('bin_no'))
+					->update([
+						'bin_no' => $request->get('bin_no'),
+						'capacity' => $request->get('capacity'),
+						'dop' => $request->get('dop')
+					]);
+					
+			return json_encode(['success' => true, 'message' => 'Existing Bin Updated']);
+			
+		} else {
+			
+			DB::table('bins')->insert([
+				'bin_no' => $request->get('bin_no'),
+				'capacity' => $request->get('capacity'),
+				'dop' => $request->get('dop')
+			]);
+			
+			return json_encode(['success' => true, 'message' => 'Bin created successfully']);
+			
+		}
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	public function userManagement(Request $request) {
+		return view('admin/userManagement');
+		
+	}
+	
+	
+	public function addUser(Request $request) {
+		
+		$username = $request->get('username');
+		$email = $request->get('email');
+		$mobile = $request->get('mobile');
+		$type = $request->get('type');
+		
+		if (in_array("", [$username, $email, $mobile, $type])) return json_encode(['success' => false, 'error_message' => 'Please fill the required informations']);
+		
+		
+		$types = ['huboperator', 'overviewer'];
+		if ($request->user()->type == 'superadmin') $types[] = 'admin';
+		
+		if (!in_array($type, $types)) return json_encode(['success' => false, 'error_message' => 'Invalid user type']);
+		
+		$existance = DB::select("select * from users where login_id = ?", [$username]);
+		
+		if (isset($existance) && count($existance) > 0) return json_encode(['success' => false, 'error_message' => 'username already exists']);
+		
+		
+		$new_password = $this->generatePassword();
+		$hash_password = \Hash::make($new_password);
+		
+		DB::table('users')->insert([
+			'login_id' => $username,
+			'type' => $type,
+			'mobile' => $mobile,
+			'email' => $email,
+			'password' => $hash_password,
+			'created_at' => date('Y-m-d H:i:s')
+		]);
+		
+		
+		return json_encode(['success' => true, 'message' => 'user ' . $username . ' created. password: ' . $new_password]);
+		
+	}
+	
+	
+	private function generatePassword() {
+		$vowels = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+		$vowelLength = strlen($vowels);
+		$password = '';
+		for ($i = 0; $i < 12; $i ++) $password .= $vowels[rand(0, $vowelLength - 1)];
+		return $password;
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	public function dopMapping(Request $request) {
+		return view('admin/dopMapping');
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	public function scrapConfig(Request $request) {
+		return view('admin/scrapConfig');
+		
+	}
+	
+	public function scrapConfigUpdate(Request $request) {
+		
+		$existance = DB::select("select * from scrap_config where product_type = ?", [$request->get('product_type')]);
+		
+		if (isset($existance) && count($existance) > 0) {
+			
+			DB::table('scrap_config')
+					->where('product_type', $request->get('product_type'))
+					->update([
+						'day_of_scrap' => $request->get('day')
+					]);
+					
+			return json_encode(['success' => true, 'message' => 'Scrap configuration updated successfully for product type: ' . $request->get('product_type')]);
+			
+		} else {
+			
+			DB::table('scrap_config')->insert([
+				'product_type' => $request->get('product_type'),
+				'day_of_scrap' => $request->get('day')
+			]);
+			
+			return json_encode(['success' => true, 'message' => 'Scrap configuration created successfully for product type: ' . $request->get('product_type')]);
+			
+		}
+		
+	}
+	
+	
+
+
+	public function mailAgeing(Request $request) {
+		return view('admin/mailAgeing');
+		
+	}
+	
+	public function mailAgeingUpdate(Request $request) {
+		
+		$existance = DB::select("select * from fdms_config");
+		//Log::info($existance);
+		
+		if (isset($existance) && count($existance) > 0) {
+			
+			DB::table('fdms_config')
+					->where('id', 1)
+					->update([
+						'mail_aging' => $request->get('mail_aging')
+					]);
+					
+			return json_encode(['success' => true, 'message' => 'Mail Aging day Updated Successfull to : ' . $request->get('mail_aging')]);
+			
+		} else {
+			
+			DB::table('fdms_config')->insert([
+				'mail_aging' => $request->get('mail_aging'),
+			]);
+			
+			return json_encode(['success' => true, 'message' => 'Mail Aging day Upadated Succesfull to: ' . $request->get('mail_aging')]);
+			
+		}
+		
+	}
+
+
+
+	public function calendar(Request $request) {
+		return view('admin/calendar');
+		
+	}
+
+	public function getCalendarData(Request $request) {
+		//return '[{"id": "1", "Name": "Shirt"}, {"id": "2", "Name":"Pants"}]';
+		//exit();
+		
+
+		$s = $request->get('s');
+		
+		$builder = DB::table('tbl_calendar');
+		
+		 
+		$data = $builder->get();
+		
+		
+		return json_encode(['success' => true, 'data' => $data]);
+		
+	}
+	
+	public function calendarUpdate(Request $request) {
+
+		//Log::info($request);
+		
+		//$existance = DB::select("select * from scrap_config where product_type = ?", [$request->get('product_type')]);
+		$holiday_name=$request->holiday_name;
+		$holiday_date= $request->holiday_date;
+
+		//Log::info($holiday_name);
+		//Log::info($holiday_date);
+		if (isset($holiday_name) && isset($holiday_date)) {
+			
+			DB::table('tbl_calendar')
+				->insert([
+				'holiday_type' => $request->get('holiday_name'),
+				'holiday_date' => $request->get('holiday_date')
+			]);
+			return json_encode(['success' => true, 'message' => 'Holiday Added with Name: '.$request->get('holiday_name').' and Date:' . $request->get('holiday_date')]);
+			
+		} else {
+			
+			// DB::table('scrap_config')->insert([
+			// 	'product_type' => $request->get('product_type'),
+			// 	'day_of_scrap' => $request->get('day')
+			// ]);
+			
+			// return json_encode(['success' => true, 'message' => 'Scrap configuration created successfully for product type: ' . $request->get('product_type')]);
+			
+		}
+		
+	}
+
+
+	
+}
+
+
+

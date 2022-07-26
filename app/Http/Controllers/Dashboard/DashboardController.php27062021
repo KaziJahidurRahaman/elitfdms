@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Http\Controllers\Dashboard;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+
+class DashboardController extends Controller {
+	
+	public function index(Request $request) {
+		
+		$inbound = DB::select("select count(*) as total from failed_delivery where status = 1");
+		$inbound = $inbound[0]->total;
+		
+		$handover = DB::select("select count(*) as total from failed_delivery where status = 5");
+		$handover = $handover[0]->total;
+		
+		$scrap = DB::select("select count(*) as total from failed_delivery where status = 9");
+		$scrap = $scrap[0]->total;
+
+//		default = uploaded by fd csv but not inbounded yet, status = 0
+		$default = DB::select("select count(*) as total from failed_delivery where status = 0");
+		$default = $default[0]->total;
+		
+		return view('dashboard/dashboard', ['inbound' => $inbound, 'handover' => $handover, 'scrap' => $scrap,'default' => $default]);
+		
+	}
+	
+}
+
+
+
